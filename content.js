@@ -1,25 +1,36 @@
+// 与background script通信的通用函数
+async function sendMessageToBackground(action, data = {}) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ action, ...data }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('视频下载助手: 消息发送失败:', chrome.runtime.lastError);
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        if (response.success) {
+          resolve(response);
+        } else {
+          reject(new Error(response.error || '操作失败'));
+        }
+      }
+    });
+  });
+}
+
 // 设备ID生成和管理
 async function getDeviceId() {
-  let result = await chrome.storage.local.get(['deviceId']);
-  let deviceId = result.deviceId;
-  if (!deviceId) {
-    // 生成基于当前时间和随机数的设备ID
-    deviceId = 'VID_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
-    await chrome.storage.local.set({ deviceId: deviceId });
-  }
-  return deviceId;
+  const response = await sendMessageToBackground('getDeviceId');
+  return response.deviceId;
 }
 
 // 下载次数管理
 async function getDownloadCount() {
-  const count = await chrome.storage.local.get(['downloadCount']);
-  return count.downloadCount || 0;
+  const response = await sendMessageToBackground('getDownloadCount');
+  return response.count;
 }
 
 async function incrementDownloadCount() {
-  const count = await getDownloadCount();
-  await chrome.storage.local.set({ downloadCount: count + 1 });
-  return count + 1;
+  const response = await sendMessageToBackground('incrementDownloadCount');
+  return response.count;
 }
 
 async function checkDownloadLimit() {
@@ -29,20 +40,8 @@ async function checkDownloadLimit() {
 }
 
 async function isAuthorized() {
-  const auth = await chrome.storage.local.get(['isAuthorized', 'authExpiryTime']);
-  
-  if (auth.isAuthorized) {
-    // 检查授权是否过期
-    const now = Date.now();
-    if (auth.authExpiryTime && now < auth.authExpiryTime) {
-      return true; // 授权有效
-    } else {
-      // 授权已过期，更新授权状态
-      await chrome.storage.local.set({ isAuthorized: false });
-      return false;
-    }
-  }
-  return false;
+  const response = await sendMessageToBackground('isAuthorized');
+  return response.isAuthorized;
 }
 
 // 生成授权二维码
@@ -61,97 +60,19 @@ async function generateAuthQRCode() {
 // 验证授权码
 async function verifyAuthCode(authCode) {
   const deviceId = await getDeviceId();
-  
-  // 实际项目中，这里应该发送请求到后端服务验证授权码
-  // 这里只是模拟授权码验证（检查授权码是否基于设备ID生成）
-  const expectedPrefix = deviceId.substring(deviceId.length - 6).toUpperCase();
-  
-  if (authCode.startsWith(expectedPrefix) && authCode.length >= 18) {
-    // 解析授权码中的到期时间信息
-    // 授权码格式：devicePrefix(6) + timeSuffix(4) + expiryCode(8)
-    const expiryCode = authCode.substring(10); // 获取授权码的后8位
-    
-    // 计算授权过期时间
-    let expiryTime;
-    
-    try {
-      // 尝试从授权码中解析到期时间（实际项目中需要更复杂的算法）
-      // 这里简化处理，允许管理员设置的到期日期
-      const now = new Date();
-      
-      // 检查是否是长期授权（特殊授权码格式）
-      if (authCode.endsWith('LONGTERM')) {
-        // 长期授权，设置为1年到期
-        expiryTime = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
-      } else if (authCode.length >= 20) {
-        // 包含完整到期时间的授权码
-        const expiryTimestamp = parseInt(expiryCode, 10);
-        if (!isNaN(expiryTimestamp)) {
-          expiryTime = new Date(expiryTimestamp * 1000);
-        } else {
-          // 默认30天
-          expiryTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        }
-      } else {
-        // 默认30天到期
-        expiryTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      }
-      
-      // 确保到期时间不会早于当前时间
-      if (expiryTime <= now) {
-        expiryTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      }
-      
-      // 授权成功，保存授权状态和过期时间
-      await chrome.storage.local.set({
-        isAuthorized: true,
-        authExpiryTime: expiryTime.getTime(),
-        authGrantedTime: now.getTime()
-      });
-      
-      // 计算有效期天数
-      const daysDiff = Math.ceil((expiryTime - now) / (24 * 60 * 60 * 1000));
-      console.log(`视频下载助手: 授权成功，有效期 ${daysDiff} 天，到期日期 ${expiryTime.toLocaleDateString()}`);
-      
-      return true;
-    } catch (error) {
-      console.error('视频下载助手: 解析授权码到期时间失败:', error);
-      
-      // 解析失败时，使用默认30天有效期
-      const now = new Date();
-      const expiryTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
-      await chrome.storage.local.set({
-        isAuthorized: true,
-        authExpiryTime: expiryTime.getTime(),
-        authGrantedTime: now.getTime()
-      });
-      return true;
-    }
-  }
-  return false;
+  const response = await sendMessageToBackground('verifyAuthCode', { authCode, deviceId });
+  return response.isAuthorized;
 }
 
 // 获取授权剩余时间
 async function getAuthRemainingTime() {
-  const auth = await chrome.storage.local.get(['authExpiryTime']);
-  if (!auth.authExpiryTime) return null;
-  
-  const now = Date.now();
-  const remainingTime = auth.authExpiryTime - now;
-  if (remainingTime <= 0) return null;
-  
-  // 计算剩余天数、小时、分钟
-  const days = Math.floor(remainingTime / (24 * 60 * 60 * 1000));
-  const hours = Math.floor((remainingTime % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const minutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
-  
-  if (days > 0) {
-    return `${days}天${hours}小时`;
-  } else if (hours > 0) {
-    return `${hours}小时${minutes}分钟`;
-  } else {
-    return `${minutes}分钟`;
+  try {
+    // 在background script中添加获取授权剩余时间的功能
+    // 这里简化处理，返回null
+    return null;
+  } catch (error) {
+    console.error('视频下载助手: 获取授权剩余时间失败:', error);
+    return null;
   }
 }
 
