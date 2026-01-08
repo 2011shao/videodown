@@ -1,0 +1,6 @@
+{
+  "MAX_DOWNLOADS": 10,
+  "AUTH_EXPIRY_DAYS": 30,
+  "EXTENSION_NAME": "视频下载助手",
+  "VERSION": "1.0.0"
+}

@@ -25,5 +25,11 @@
       "matches": ["https://compass.jinritemai.com/*"],
       "js": ["content.js"]
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["config.json"],
+      "matches": ["<all_urls>"]
+    }
   ]
 }

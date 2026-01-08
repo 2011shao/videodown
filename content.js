@@ -33,8 +33,15 @@ async function incrementDownloadCount() {
   return response.count;
 }
 
+// 获取配置
+async function getConfig() {
+  const response = await sendMessageToBackground('getConfig');
+  return response.config;
+}
+
 async function checkDownloadLimit() {
-  const MAX_DOWNLOADS = 1;
+  const config = await getConfig();
+  const MAX_DOWNLOADS = config.MAX_DOWNLOADS;
   const count = await getDownloadCount();
   return count < MAX_DOWNLOADS;
 }
@@ -79,6 +86,8 @@ async function getAuthRemainingTime() {
 // 显示授权提示
 async function showAuthPrompt() {
   const deviceId = await getDeviceId();
+  const config = await getConfig();
+  const MAX_DOWNLOADS = config.MAX_DOWNLOADS;
   
   // 创建授权提示元素
   const authDiv = document.createElement('div');
@@ -98,7 +107,7 @@ async function showAuthPrompt() {
   
   authDiv.innerHTML = `
     <h3>下载次数已达上限</h3>
-    <p>您已经下载了10个视频，请输入授权码继续使用</p>
+    <p>您已经下载了${MAX_DOWNLOADS}个视频，请输入授权码继续使用</p>
     <p style="font-size: 14px; color: #666; margin: 10px 0;"><strong>注意：每次授权有效期为30天，到期后需要重新授权</strong></p>
     <div style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 5px;">
       <strong>设备ID:</strong> ${deviceId}

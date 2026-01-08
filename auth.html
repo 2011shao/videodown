@@ -22,21 +22,7 @@
             color: #34495e;
             margin-top: 30px;
         }
-        .device-info {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #3498db;
-        }
-        .qr-code {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin: 20px 0;
-        }
+
         .btn {
             display: inline-block;
             padding: 12px 24px;
@@ -85,21 +71,6 @@
     
     <div class="note">
         <p>本页面用于视频下载助手的设备授权管理。当设备下载次数达到10次上限后，需要通过此页面进行授权才能继续使用。</p>
-    </div>
-
-    <h2>设备信息</h2>
-    <div class="device-info">
-        <p><strong>设备ID:</strong> <span id="deviceId"></span></p>
-        <p><strong>当前状态:</strong> <span id="authStatus" style="color: #e74c3c;">未授权</span></p>
-        <p><strong>授权码:</strong> <span id="authCode"></span></p>
-    </div>
-
-    <h2>授权二维码</h2>
-    <div class="qr-code">
-        <p>请使用管理员账号扫描下方二维码进行授权</p>
-        <div id="qrcode" style="display: inline-block; padding: 10px; background: white; border: 1px solid #ddd;">
-            <!-- 二维码将在此处生成 -->
-        </div>
     </div>
 
     <h2>管理员操作 - 生成授权码</h2>
@@ -163,6 +134,81 @@
     </div>
 
     <script>
+        // 加密工具函数
+        function encryptAuthCode(plainCode) {
+            // 1. 添加前缀和后缀
+            const prefixed = 'VID_AUTH_' + plainCode + '_END';
+            
+            // 2. 字符混淆：简单的字符替换
+            const charMap = {
+                'A': 'X', 'B': 'Y', 'C': 'Z', 'D': 'A', 'E': 'B',
+                'F': 'C', 'G': 'D', 'H': 'E', 'I': 'F', 'J': 'G',
+                'K': 'H', 'L': 'I', 'M': 'J', 'N': 'K', 'O': 'L',
+                'P': 'M', 'Q': 'N', 'R': 'O', 'S': 'P', 'T': 'Q',
+                'U': 'R', 'V': 'S', 'W': 'T', 'X': 'U', 'Y': 'V',
+                'Z': 'W', '0': '5', '1': '6', '2': '7', '3': '8',
+                '4': '9', '5': '0', '6': '1', '7': '2', '8': '3',
+                '9': '4'
+            };
+            
+            let obfuscated = '';
+            for (let char of prefixed) {
+                obfuscated += charMap[char] || char;
+            }
+            
+            // 3. Base64编码
+            const encoded = btoa(obfuscated);
+            
+            // 4. 再次进行字符替换，增加复杂度
+            let final = '';
+            for (let i = 0; i < encoded.length; i++) {
+                const char = encoded.charAt(i);
+                final += String.fromCharCode(char.charCodeAt(0) + 3);
+            }
+            
+            return final;
+        }
+
+        // 解密授权码
+        function decryptAuthCode(encryptedCode) {
+            try {
+                // 1. 逆向字符码偏移
+                let shifted = '';
+                for (let i = 0; i < encryptedCode.length; i++) {
+                    const char = encryptedCode.charAt(i);
+                    shifted += String.fromCharCode(char.charCodeAt(0) - 3);
+                }
+                
+                // 2. Base64解码
+                const decoded = atob(shifted);
+                
+                // 3. 逆向字符混淆
+                const reverseCharMap = {
+                    'X': 'A', 'Y': 'B', 'Z': 'C', 'A': 'D', 'B': 'E',
+                    'C': 'F', 'D': 'G', 'E': 'H', 'F': 'I', 'G': 'J',
+                    'H': 'K', 'I': 'L', 'J': 'M', 'K': 'N', 'L': 'O',
+                    'M': 'P', 'N': 'Q', 'O': 'R', 'P': 'S', 'Q': 'T',
+                    'R': 'U', 'S': 'V', 'T': 'W', 'U': 'X', 'V': 'Y',
+                    'W': 'Z', '5': '0', '6': '1', '7': '2', '8': '3',
+                    '9': '4', '0': '5', '1': '6', '2': '7', '3': '8',
+                    '4': '9'
+                };
+                
+                let deobfuscated = '';
+                for (let char of decoded) {
+                    deobfuscated += reverseCharMap[char] || char;
+                }
+                
+                // 4. 移除前缀和后缀
+                const plainCode = deobfuscated.replace('VID_AUTH_', '').replace('_END', '');
+                
+                return plainCode;
+            } catch (error) {
+                console.error('解密授权码失败:', error);
+                return null;
+            }
+        }
+
         // 生成随机授权码
         function generateAuthCode() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -184,22 +230,25 @@
             }
             return params;
         }
-
+        
         // 初始化页面
         function init() {
             const params = getUrlParams();
-            const deviceId = params.deviceId || '未知设备ID';
-            const authCode = generateAuthCode();
+            const deviceId = params.deviceId || '';
             
-            // 显示设备信息
-            document.getElementById('deviceId').textContent = deviceId;
-            document.getElementById('authCode').textContent = authCode;
-            
-            // 生成简单的二维码文本表示（实际项目中应使用二维码库）
-            const qrContent = `DEVICE_ID: ${deviceId}\nAUTH_CODE: ${authCode}`;
-            const qrElement = document.getElementById('qrcode');
-            qrElement.innerHTML = `<pre style="font-family: monospace; font-size: 12px; line-height: 1;">${qrContent}</pre>`;
+            // 显示设备信息到管理员输入框
+            document.getElementById('adminDeviceId').value = deviceId;
         }
+        
+        // 监听管理员设备ID输入变化（移除了对不存在元素的引用）
+        document.addEventListener('DOMContentLoaded', function() {
+            const adminDeviceIdInput = document.getElementById('adminDeviceId');
+            if (adminDeviceIdInput) {
+                adminDeviceIdInput.addEventListener('input', function() {
+                    // 设备ID输入变化时的处理逻辑可以根据需要添加
+                });
+            }
+        });
 
         // 初始化日期选择器，设置默认30天后的日期
         function initDatePicker() {
@@ -240,9 +289,19 @@
             const devicePrefix = adminDeviceId.substring(adminDeviceId.length - 6).toUpperCase();
             const timestamp = Date.now();
             const timeSuffix = timestamp.toString().substring(8);
-            const expiryCode = expiryTimestamp.toString().substring(6); // 使用时间戳的后6位
+            // 确保到期码是8位：如果时间戳小于10位，前面补0；否则取后8位
+            let expiryCode = expiryTimestamp.toString();
+            if (expiryCode.length < 8) {
+                expiryCode = expiryCode.padStart(8, '0');
+            } else {
+                expiryCode = expiryCode.slice(-8); // 取后8位
+            }
             
-            const authCode = devicePrefix + timeSuffix + expiryCode;
+            // 生成原始授权码
+            const plainAuthCode = devicePrefix + timeSuffix + expiryCode;
+            
+            // 加密授权码
+            const authCode = encryptAuthCode(plainAuthCode);
             
             // 显示生成的授权码
             document.getElementById('generatedAuthCode').textContent = authCode;
@@ -254,24 +313,36 @@
 
         // 用户验证授权码
         function verifyAuthCode() {
-            const userAuthCode = document.getElementById('userAuthCode').value;
-            const deviceId = document.getElementById('deviceId').textContent;
+            const userAuthCode = document.getElementById('userAuthCode').value.trim();
+            const deviceId = document.getElementById('adminDeviceId').value;
             
             if (!userAuthCode) {
                 alert('请输入授权码');
                 return;
             }
             
-            // 实际项目中，这里应该发送请求到后端服务验证授权码
-            // 这里只是模拟授权码验证（检查授权码是否基于设备ID生成）
-            const expectedPrefix = deviceId.substring(deviceId.length - 6).toUpperCase();
+            if (!deviceId) {
+                alert('请先输入设备ID');
+                return;
+            }
             
-            if (userAuthCode.startsWith(expectedPrefix)) {
+            // 实际项目中，这里应该发送请求到后端服务验证授权码
+            // 这里解密授权码并验证是否基于设备ID生成
+            const plainAuthCode = decryptAuthCode(userAuthCode);
+            if (!plainAuthCode) {
+                alert('授权码格式错误，请检查后重试');
+                return;
+            }
+            
+            const expectedPrefix = deviceId.substring(deviceId.length - 6).toUpperCase();
+            console.log('解密后的授权码:', plainAuthCode);
+            console.log('预期前缀:', expectedPrefix);
+            console.log('实际前缀:', plainAuthCode.substring(0, 6));
+            
+            if (plainAuthCode.startsWith(expectedPrefix)) {
                 // 模拟授权成功
                 setTimeout(() => {
                     alert(`授权码验证成功！设备 ${deviceId} 已授权。`);
-                    document.getElementById('authStatus').textContent = '已授权';
-                    document.getElementById('authStatus').style.color = '#2ecc71';
                     
                     // 保存授权状态到URL哈希，以便扩展读取
                     window.location.hash = `auth_success_${deviceId}_${userAuthCode}`;

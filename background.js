@@ -1,5 +1,42 @@
 // background.js - 处理storage API调用，与content script通信
 
+// 初始化配置
+async function initConfig() {
+  try {
+    // 从config.json读取配置
+    const response = await fetch(chrome.runtime.getURL('config.json'));
+    const config = await response.json();
+    
+    // 将配置存储到chrome.storage.local
+    await chrome.storage.local.set({ config: config });
+    console.log('视频下载助手: 配置已初始化', config);
+  } catch (error) {
+    console.error('视频下载助手: 初始化配置失败:', error);
+    
+    // 使用默认配置
+    const defaultConfig = {
+      MAX_DOWNLOADS: 10,
+      AUTH_EXPIRY_DAYS: 30,
+      EXTENSION_NAME: '视频下载助手',
+      VERSION: '1.0.0'
+    };
+    await chrome.storage.local.set({ config: defaultConfig });
+    console.log('视频下载助手: 使用默认配置', defaultConfig);
+  }
+}
+
+// 扩展安装或更新时初始化配置
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('视频下载助手: 扩展已安装或更新');
+  initConfig();
+});
+
+// 扩展启动时初始化配置
+chrome.runtime.onStartup.addListener(() => {
+  console.log('视频下载助手: 扩展已启动');
+  initConfig();
+});
+
 // 监听content script的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('视频下载助手: 收到消息:', request);
@@ -21,6 +58,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'verifyAuthCode':
       verifyAuthCode(request.authCode, request.deviceId, sendResponse);
       break;
+    case 'getConfig':
+      getConfig(sendResponse);
+      break;
     default:
       console.error('视频下载助手: 未知消息类型:', request.action);
       sendResponse({ error: '未知消息类型' });
@@ -29,6 +69,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // 异步响应需要返回true
   return true;
 });
+
+// 获取配置
+async function getConfig(sendResponse) {
+  try {
+    const result = await chrome.storage.local.get(['config']);
+    
+    // 如果没有配置，重新初始化
+    if (!result.config) {
+      await initConfig();
+      const updatedResult = await chrome.storage.local.get(['config']);
+      sendResponse({ success: true, config: updatedResult.config });
+      return;
+    }
+    
+    sendResponse({ success: true, config: result.config });
+  } catch (error) {
+    console.error('视频下载助手: 获取配置失败:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
 
 // 设备ID生成和管理
 async function getDeviceId(sendResponse) {
@@ -93,17 +153,66 @@ async function isAuthorized(sendResponse) {
   }
 }
 
+// 解密授权码
+function decryptAuthCode(encryptedCode) {
+  try {
+    // 1. 首先进行字符替换（与加密相反）
+    let decoded = '';
+    for (let i = 0; i < encryptedCode.length; i++) {
+      const char = encryptedCode.charAt(i);
+      decoded += String.fromCharCode(char.charCodeAt(0) - 3);
+    }
+    
+    // 2. Base64解码
+    const base64Decoded = atob(decoded);
+    
+    // 3. 字符反混淆
+    const reverseCharMap = {
+      'X': 'A', 'Y': 'B', 'Z': 'C', 'A': 'D', 'B': 'E',
+      'C': 'F', 'D': 'G', 'E': 'H', 'F': 'I', 'G': 'J',
+      'H': 'K', 'I': 'L', 'J': 'M', 'K': 'N', 'L': 'O',
+      'M': 'P', 'N': 'Q', 'O': 'R', 'P': 'S', 'Q': 'T',
+      'R': 'U', 'S': 'V', 'T': 'W', 'U': 'X', 'V': 'Y',
+      'W': 'Z', '5': '0', '6': '1', '7': '2', '8': '3',
+      '9': '4', '0': '5', '1': '6', '2': '7', '3': '8',
+      '4': '9'
+    };
+    
+    let deobfuscated = '';
+    for (let char of base64Decoded) {
+      deobfuscated += reverseCharMap[char] || char;
+    }
+    
+    // 4. 移除前缀和后缀
+    const plainCode = deobfuscated.replace('VID_AUTH_', '').replace('_END', '');
+    
+    return plainCode;
+  } catch (error) {
+    console.error('视频下载助手: 解密授权码失败:', error);
+    return null;
+  }
+}
+
 // 验证授权码
 async function verifyAuthCode(authCode, deviceId, sendResponse) {
   try {
     // 实际项目中，这里应该发送请求到后端服务验证授权码
     // 这里只是模拟授权码验证（检查授权码是否基于设备ID生成）
+    
+    // 解密授权码
+    const plainAuthCode = decryptAuthCode(authCode);
+    if (!plainAuthCode) {
+      sendResponse({ success: true, isAuthorized: false });
+      return;
+    }
+    
     const expectedPrefix = deviceId.substring(deviceId.length - 6).toUpperCase();
     
-    if (authCode.startsWith(expectedPrefix) && authCode.length >= 18) {
+    // 兼容旧格式授权码（长度可能不足18位）和新格式授权码
+    if (plainAuthCode.startsWith(expectedPrefix)) {
       // 解析授权码中的到期时间信息
       // 授权码格式：devicePrefix(6) + timeSuffix(4) + expiryCode(8)
-      const expiryCode = authCode.substring(10); // 获取授权码的后8位
+      const expiryCode = plainAuthCode.substring(10); // 获取解密后授权码的后8位
       
       // 计算授权过期时间
       let expiryTime;

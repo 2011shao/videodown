@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>配置测试页面</h1>
+    
+    <div class="test-section">
+        <h2>测试步骤</h2>
+        <ol>
+            <li>确保您已将扩展加载到Chrome中</li>
+            <li>打开扩展管理页面，点击"重新加载"按钮</li>
+            <li>点击下方按钮测试配置功能</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试功能</h2>
+        <button id="testConfig">测试配置加载</button>
+        <button id="testDownloadLimit">测试下载限制</button>
+        <button id="updateConfig">更新配置</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试结果</h2>
+        <div id="result"></div>
+    </div>
+    
+    <script>
+        const resultDiv = document.getElementById('result');
+        
+        function log(message) {
+            resultDiv.textContent += message + '\n';
+        }
+        
+        function clearLog() {
+            resultDiv.textContent = '';
+        }
+        
+        // 测试配置加载
+        document.getElementById('testConfig').addEventListener('click', async () => {
+            clearLog();
+            log('开始测试配置加载...');
+            
+            try {
+                const response = await chrome.runtime.sendMessage({ action: 'getConfig' });
+                if (response.success) {
+                    log('配置加载成功！');
+                    log(JSON.stringify(response.config, null, 2));
+                    log(`MAX_DOWNLOADS: ${response.config.MAX_DOWNLOADS}`);
+                } else {
+                    log('配置加载失败:', response.error);
+                }
+            } catch (error) {
+                log('错误:', error.message);
+            }
+        });
+        
+        // 测试下载限制
+        document.getElementById('testDownloadLimit').addEventListener('click', async () => {
+            clearLog();
+            log('开始测试下载限制...');
+            
+            try {
+                // 获取下载次数
+                const countResponse = await chrome.runtime.sendMessage({ action: 'getDownloadCount' });
+                if (countResponse.success) {
+                    log(`当前下载次数: ${countResponse.count}`);
+                } else {
+                    log('获取下载次数失败:', countResponse.error);
+                }
+                
+                // 获取配置
+                const configResponse = await chrome.runtime.sendMessage({ action: 'getConfig' });
+                if (configResponse.success) {
+                    log(`最大下载次数: ${configResponse.config.MAX_DOWNLOADS}`);
+                } else {
+                    log('获取配置失败:', configResponse.error);
+                }
+            } catch (error) {
+                log('错误:', error.message);
+            }
+        });
+        
+        // 更新配置（测试用）
+        document.getElementById('updateConfig').addEventListener('click', async () => {
+            clearLog();
+            log('开始更新配置...');
+            
+            // 提示用户输入新的MAX_DOWNLOADS值
+            const newValue = prompt('请输入新的MAX_DOWNLOADS值:', '10');
+            if (newValue === null) return;
+            
+            try {
+                // 读取当前配置
+                const configResponse = await chrome.runtime.sendMessage({ action: 'getConfig' });
+                if (configResponse.success) {
+                    // 更新配置
+                    const newConfig = { ...configResponse.config, MAX_DOWNLOADS: parseInt(newValue) };
+                    await chrome.storage.local.set({ config: newConfig });
+                    log('配置更新成功！');
+                    log(`新的MAX_DOWNLOADS值: ${newValue}`);
+                } else {
+                    log('获取配置失败:', configResponse.error);
+                }
+            } catch (error) {
+                log('错误:', error.message);
+            }
+        });
+    </script>
+</body>
+</html>
