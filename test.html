@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频下载助手测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .video-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        video {
+            width: 100%;
+            max-width: 600px;
+            display: block;
+            margin: 0 auto;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .note {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>视频下载助手测试页面</h1>
+    
+    <div class="video-container">
+        <h2>测试视频 1 - 直接设置src属性</h2>
+        <video controls src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">
+            您的浏览器不支持HTML5视频
+        </video>
+        <div class="note">
+            这是一个直接设置了src属性的视频示例
+        </div>
+    </div>
+    
+    <div class="video-container">
+        <h2>测试视频 2 - 使用source标签</h2>
+        <video controls>
+            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" type="video/mp4">
+            您的浏览器不支持HTML5视频
+        </video>
+        <div class="note">
+            这是一个使用source标签的视频示例
+        </div>
+    </div>
+    
+    <div class="video-container">
+        <h2>测试视频 3 - 动态加载</h2>
+        <div id="dynamic-video-container"></div>
+        <button onclick="loadDynamicVideo()">加载动态视频</button>
+        <div class="note">
+            点击按钮后动态加载的视频示例
+        </div>
+    </div>
+    
+    <script>
+        function loadDynamicVideo() {
+            const container = document.getElementById('dynamic-video-container');
+            container.innerHTML = '<video controls src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4">您的浏览器不支持HTML5视频</video>';
+        }
+    </script>
+</body>
+</html>
