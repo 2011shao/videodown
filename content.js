@@ -46,6 +46,22 @@ async function generateAuthQRCode() {
   });
 }
 
+// 验证授权码
+async function verifyAuthCode(authCode) {
+  const deviceId = await getDeviceId();
+  
+  // 实际项目中，这里应该发送请求到后端服务验证授权码
+  // 这里只是模拟授权码验证（检查授权码是否基于设备ID生成）
+  const expectedPrefix = deviceId.substring(deviceId.length - 6).toUpperCase();
+  
+  if (authCode.startsWith(expectedPrefix)) {
+    // 授权成功，保存授权状态
+    await chrome.storage.local.set({ isAuthorized: true });
+    return true;
+  }
+  return false;
+}
+
 // 显示授权提示
 async function showAuthPrompt() {
   const deviceId = await getDeviceId();
@@ -63,18 +79,31 @@ async function showAuthPrompt() {
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     z-index: 100000;
-    max-width: 400px;
+    max-width: 450px;
     text-align: center;
   `;
   
   authDiv.innerHTML = `
     <h3>下载次数已达上限</h3>
-    <p>您已经下载了10个视频，请扫码授权继续使用</p>
+    <p>您已经下载了10个视频，请输入授权码继续使用</p>
     <div style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 5px;">
       <strong>设备ID:</strong> ${deviceId}
+      <br><br>
+      <button id="copyDeviceIdBtn" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">复制设备ID</button>
     </div>
+    
+    <h4>输入授权码</h4>
+    <div style="margin: 15px 0;">
+      <input type="text" id="authCodeInput" placeholder="请输入管理员提供的授权码" style="padding: 10px; font-size: 16px; width: 300px; text-align: center; font-family: monospace;">
+    </div>
+    <div style="margin: 10px 0;">
+      <button id="verifyAuthCodeBtn" style="background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">验证授权码</button>
+    </div>
+    
+    <h4>或通过网页授权</h4>
     <p>请访问以下链接进行授权:</p>
-    <a href="${authUrl}" target="_blank" style="color: #3498db; text-decoration: none;">${authUrl}</a>
+    <a href="${authUrl}" target="_blank" style="color: #3498db; text-decoration: none; word-break: break-all; font-size: 14px;">${authUrl}</a>
+    
     <div style="margin-top: 20px;">
       <button id="checkAuthBtn" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">检查授权状态</button>
       <button id="closeAuthBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-left: 10px;">关闭</button>
@@ -84,6 +113,41 @@ async function showAuthPrompt() {
   document.body.appendChild(authDiv);
   
   // 添加事件监听器
+  
+  // 复制设备ID
+  document.getElementById('copyDeviceIdBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(deviceId).then(() => {
+      alert('设备ID已复制到剪贴板');
+    }).catch(() => {
+      // 降级方案
+      const tempInput = document.createElement('input');
+      tempInput.value = deviceId;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      alert('设备ID已复制到剪贴板');
+    });
+  });
+  
+  // 验证授权码
+  document.getElementById('verifyAuthCodeBtn').addEventListener('click', async () => {
+    const authCode = document.getElementById('authCodeInput').value;
+    if (!authCode) {
+      alert('请输入授权码');
+      return;
+    }
+    
+    const isValid = await verifyAuthCode(authCode);
+    if (isValid) {
+      alert('授权成功！您可以继续使用下载功能。');
+      authDiv.remove();
+    } else {
+      alert('授权码无效，请检查后重试');
+    }
+  });
+  
+  // 检查授权状态
   document.getElementById('checkAuthBtn').addEventListener('click', async () => {
     const authorized = await isAuthorized();
     if (authorized) {
@@ -94,6 +158,7 @@ async function showAuthPrompt() {
     }
   });
   
+  // 关闭按钮
   document.getElementById('closeAuthBtn').addEventListener('click', () => {
     authDiv.remove();
   });
