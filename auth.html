@@ -105,9 +105,16 @@
     <h2>管理员操作 - 生成授权码</h2>
     <div class="auth-section">
         <h3>生成授权码</h3>
-        <p>请输入用户提供的设备ID，生成授权码：</p>
-        <div>
-            <input type="text" id="adminDeviceId" placeholder="输入用户设备ID" style="padding: 10px; font-size: 16px; width: 300px; margin-right: 10px;">
+        <p>请输入用户提供的设备ID，并选择授权到期日期：</p>
+        <div style="margin: 15px 0;">
+            <input type="text" id="adminDeviceId" placeholder="输入用户设备ID" style="padding: 10px; font-size: 16px; width: 300px; margin-right: 10px; border: 2px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="margin: 15px 0;">
+            <label for="expiryDate" style="display: inline-block; width: 120px; text-align: right; margin-right: 10px;">授权到期日期：</label>
+            <input type="date" id="expiryDate" style="padding: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 4px;">
+            <span style="margin-left: 10px; font-size: 14px; color: #666;">默认30天后到期</span>
+        </div>
+        <div style="margin: 15px 0;">
             <button class="btn btn-primary" onclick="generateAuthCodeForDevice()">生成授权码</button>
         </div>
         <div style="margin-top: 15px;">
@@ -120,7 +127,7 @@
         <h3>输入授权码</h3>
         <p>请输入管理员提供的授权码完成授权：</p>
         <div>
-            <input type="text" id="userAuthCode" placeholder="输入授权码" style="padding: 10px; font-size: 16px; width: 300px; margin-right: 10px;">
+            <input type="text" id="userAuthCode" placeholder="输入授权码" style="padding: 10px; font-size: 16px; width: 300px; margin-right: 10px; border: 2px solid #ddd; border-radius: 4px;">
             <button class="btn btn-success" onclick="verifyAuthCode()">验证授权码</button>
         </div>
     </div>
@@ -134,7 +141,8 @@
             <li>等待管理员生成授权码并发送给您</li>
             <li>在授权提示窗口中输入管理员提供的<strong>授权码</strong></li>
             <li>点击"验证授权码"按钮完成授权</li>
-            <li>授权成功后即可继续下载视频</li>
+            <li>授权成功后即可继续下载视频，<strong>每次授权有效期为30天</strong></li>
+            <li>授权到期后，需要重新联系管理员获取授权码</li>
         </ol>
         
         <h3>管理员端流程</h3>
@@ -143,15 +151,10 @@
             <li>在本页面的"管理员操作 - 生成授权码"部分，输入用户的设备ID</li>
             <li>点击"生成授权码"按钮，系统会生成一个唯一的授权码</li>
             <li>将生成的<strong>授权码</strong>发送给用户</li>
-            <li>用户输入授权码后，系统会自动验证并完成授权</li>
+            <li>用户输入授权码后，系统会自动验证并完成授权，<strong>授权有效期为30天</strong></li>
         </ol>
         
-        <h3>网页授权流程（备选）</h3>
-        <ol>
-            <li>用户访问授权链接，进入本页面</li>
-            <li>在"用户操作 - 输入授权码"部分，输入管理员提供的授权码</li>
-            <li>点击"验证授权码"按钮完成授权</li>
-        </ol>
+
     </div>
 
     <h2>授权记录</h2>
@@ -198,23 +201,55 @@
             qrElement.innerHTML = `<pre style="font-family: monospace; font-size: 12px; line-height: 1;">${qrContent}</pre>`;
         }
 
+        // 初始化日期选择器，设置默认30天后的日期
+        function initDatePicker() {
+            const today = new Date();
+            const defaultExpiry = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+            const formattedDate = defaultExpiry.toISOString().split('T')[0];
+            document.getElementById('expiryDate').value = formattedDate;
+        }
+
         // 为指定设备生成授权码
         function generateAuthCodeForDevice() {
             const adminDeviceId = document.getElementById('adminDeviceId').value;
+            const expiryDateInput = document.getElementById('expiryDate');
             
             if (!adminDeviceId) {
                 alert('请输入设备ID');
                 return;
             }
             
-            // 生成基于设备ID的授权码（实际项目中应使用更复杂的算法）
+            // 获取到期日期，默认为30天后
+            const today = new Date();
+            let expiryDate;
+            
+            if (expiryDateInput.value) {
+                // 使用管理员选择的日期
+                expiryDate = new Date(expiryDateInput.value);
+                // 设置为当天的23:59:59
+                expiryDate.setHours(23, 59, 59, 999);
+            } else {
+                // 默认30天后到期
+                expiryDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+            }
+            
+            // 计算到期时间戳（转换为10位时间戳，精确到秒）
+            const expiryTimestamp = Math.floor(expiryDate.getTime() / 1000);
+            
+            // 生成基于设备ID和到期时间的授权码
+            const devicePrefix = adminDeviceId.substring(adminDeviceId.length - 6).toUpperCase();
             const timestamp = Date.now();
-            const baseCode = adminDeviceId.substring(adminDeviceId.length - 6) + timestamp.toString().substring(8);
-            const authCode = baseCode.toUpperCase();
+            const timeSuffix = timestamp.toString().substring(8);
+            const expiryCode = expiryTimestamp.toString().substring(6); // 使用时间戳的后6位
+            
+            const authCode = devicePrefix + timeSuffix + expiryCode;
             
             // 显示生成的授权码
             document.getElementById('generatedAuthCode').textContent = authCode;
-            alert(`设备 ${adminDeviceId} 的授权码已生成：${authCode}\n请将此授权码发送给用户`);
+            
+            // 计算有效期天数
+            const daysDiff = Math.ceil((expiryDate - today) / (24 * 60 * 60 * 1000));
+            alert(`设备 ${adminDeviceId} 的授权码已生成：${authCode}\n授权有效期：${daysDiff}天\n到期日期：${expiryDate.toLocaleDateString()}\n请将此授权码发送给用户`);
         }
 
         // 用户验证授权码
@@ -265,7 +300,10 @@
         }
 
         // 页面加载时初始化
-        window.onload = init;
+        window.onload = function() {
+            init();
+            initDatePicker();
+        };
     </script>
 </body>
 </html>

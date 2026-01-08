@@ -29,8 +29,20 @@ async function checkDownloadLimit() {
 }
 
 async function isAuthorized() {
-  const auth = await chrome.storage.local.get(['isAuthorized']);
-  return auth.isAuthorized || false;
+  const auth = await chrome.storage.local.get(['isAuthorized', 'authExpiryTime']);
+  
+  if (auth.isAuthorized) {
+    // 检查授权是否过期
+    const now = Date.now();
+    if (auth.authExpiryTime && now < auth.authExpiryTime) {
+      return true; // 授权有效
+    } else {
+      // 授权已过期，更新授权状态
+      await chrome.storage.local.set({ isAuthorized: false });
+      return false;
+    }
+  }
+  return false;
 }
 
 // 生成授权二维码
@@ -54,18 +66,98 @@ async function verifyAuthCode(authCode) {
   // 这里只是模拟授权码验证（检查授权码是否基于设备ID生成）
   const expectedPrefix = deviceId.substring(deviceId.length - 6).toUpperCase();
   
-  if (authCode.startsWith(expectedPrefix)) {
-    // 授权成功，保存授权状态
-    await chrome.storage.local.set({ isAuthorized: true });
-    return true;
+  if (authCode.startsWith(expectedPrefix) && authCode.length >= 18) {
+    // 解析授权码中的到期时间信息
+    // 授权码格式：devicePrefix(6) + timeSuffix(4) + expiryCode(8)
+    const expiryCode = authCode.substring(10); // 获取授权码的后8位
+    
+    // 计算授权过期时间
+    let expiryTime;
+    
+    try {
+      // 尝试从授权码中解析到期时间（实际项目中需要更复杂的算法）
+      // 这里简化处理，允许管理员设置的到期日期
+      const now = new Date();
+      
+      // 检查是否是长期授权（特殊授权码格式）
+      if (authCode.endsWith('LONGTERM')) {
+        // 长期授权，设置为1年到期
+        expiryTime = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+      } else if (authCode.length >= 20) {
+        // 包含完整到期时间的授权码
+        const expiryTimestamp = parseInt(expiryCode, 10);
+        if (!isNaN(expiryTimestamp)) {
+          expiryTime = new Date(expiryTimestamp * 1000);
+        } else {
+          // 默认30天
+          expiryTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        }
+      } else {
+        // 默认30天到期
+        expiryTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      }
+      
+      // 确保到期时间不会早于当前时间
+      if (expiryTime <= now) {
+        expiryTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      }
+      
+      // 授权成功，保存授权状态和过期时间
+      await chrome.storage.local.set({
+        isAuthorized: true,
+        authExpiryTime: expiryTime.getTime(),
+        authGrantedTime: now.getTime()
+      });
+      
+      // 计算有效期天数
+      const daysDiff = Math.ceil((expiryTime - now) / (24 * 60 * 60 * 1000));
+      console.log(`视频下载助手: 授权成功，有效期 ${daysDiff} 天，到期日期 ${expiryTime.toLocaleDateString()}`);
+      
+      return true;
+    } catch (error) {
+      console.error('视频下载助手: 解析授权码到期时间失败:', error);
+      
+      // 解析失败时，使用默认30天有效期
+      const now = new Date();
+      const expiryTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      
+      await chrome.storage.local.set({
+        isAuthorized: true,
+        authExpiryTime: expiryTime.getTime(),
+        authGrantedTime: now.getTime()
+      });
+      return true;
+    }
   }
   return false;
+}
+
+// 获取授权剩余时间
+async function getAuthRemainingTime() {
+  const auth = await chrome.storage.local.get(['authExpiryTime']);
+  if (!auth.authExpiryTime) return null;
+  
+  const now = Date.now();
+  const remainingTime = auth.authExpiryTime - now;
+  if (remainingTime <= 0) return null;
+  
+  // 计算剩余天数、小时、分钟
+  const days = Math.floor(remainingTime / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((remainingTime % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const minutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
+  
+  if (days > 0) {
+    return `${days}天${hours}小时`;
+  } else if (hours > 0) {
+    return `${hours}小时${minutes}分钟`;
+  } else {
+    return `${minutes}分钟`;
+  }
 }
 
 // 显示授权提示
 async function showAuthPrompt() {
   const deviceId = await getDeviceId();
-  const authUrl = `https://2011shao.github.io/videodown/auth.html?deviceId=${deviceId}`;
   
   // 创建授权提示元素
   const authDiv = document.createElement('div');
@@ -86,6 +178,7 @@ async function showAuthPrompt() {
   authDiv.innerHTML = `
     <h3>下载次数已达上限</h3>
     <p>您已经下载了10个视频，请输入授权码继续使用</p>
+    <p style="font-size: 14px; color: #666; margin: 10px 0;"><strong>注意：每次授权有效期为30天，到期后需要重新授权</strong></p>
     <div style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 5px;">
       <strong>设备ID:</strong> ${deviceId}
       <br><br>
@@ -94,15 +187,11 @@ async function showAuthPrompt() {
     
     <h4>输入授权码</h4>
     <div style="margin: 15px 0;">
-      <input type="text" id="authCodeInput" placeholder="请输入管理员提供的授权码" style="padding: 10px; font-size: 16px; width: 300px; text-align: center; font-family: monospace;">
+      <input type="text" id="authCodeInput" placeholder="请输入管理员提供的授权码" style="padding: 10px; font-size: 16px; width: 300px; text-align: center; font-family: monospace; border: 2px solid #ddd; border-radius: 4px; outline: none;">
     </div>
     <div style="margin: 10px 0;">
       <button id="verifyAuthCodeBtn" style="background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">验证授权码</button>
     </div>
-    
-    <h4>或通过网页授权</h4>
-    <p>请访问以下链接进行授权:</p>
-    <a href="${authUrl}" target="_blank" style="color: #3498db; text-decoration: none; word-break: break-all; font-size: 14px;">${authUrl}</a>
     
     <div style="margin-top: 20px;">
       <button id="checkAuthBtn" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">检查授权状态</button>
