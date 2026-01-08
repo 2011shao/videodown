@@ -11,7 +11,8 @@
   },
   "permissions": [
     "activeTab",
-    "downloads"
+    "downloads",
+    "storage"
   ],
   "host_permissions": [
     "https://compass.jinritemai.com/*"

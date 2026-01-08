@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>带货视频助手 - 授权管理</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .device-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        .qr-code {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin: 20px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        .btn-success {
+            background-color: #2ecc71;
+        }
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        .auth-section {
+            background-color: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .note {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>带货视频助手 - 授权管理</h1>
+    
+    <div class="note">
+        <p>本页面用于视频下载助手的设备授权管理。当设备下载次数达到10次上限后，需要通过此页面进行授权才能继续使用。</p>
+    </div>
+
+    <h2>设备信息</h2>
+    <div class="device-info">
+        <p><strong>设备ID:</strong> <span id="deviceId"></span></p>
+        <p><strong>当前状态:</strong> <span id="authStatus" style="color: #e74c3c;">未授权</span></p>
+        <p><strong>授权码:</strong> <span id="authCode"></span></p>
+    </div>
+
+    <h2>授权二维码</h2>
+    <div class="qr-code">
+        <p>请使用管理员账号扫描下方二维码进行授权</p>
+        <div id="qrcode" style="display: inline-block; padding: 10px; background: white; border: 1px solid #ddd;">
+            <!-- 二维码将在此处生成 -->
+        </div>
+    </div>
+
+    <h2>授权操作</h2>
+    <div class="auth-section">
+        <h3>管理员操作</h3>
+        <p>如果您是管理员，请输入授权码并点击授权按钮：</p>
+        <div>
+            <input type="text" id="adminAuthCode" placeholder="输入授权码" style="padding: 10px; font-size: 16px; width: 300px; margin-right: 10px;">
+            <button class="btn btn-success" onclick="authorizeDevice()">授权设备</button>
+        </div>
+    </div>
+
+    <h2>使用说明</h2>
+    <div>
+        <h3>用户端</h3>
+        <ol>
+            <li>当您的设备下载次数达到10次上限后，会弹出授权提示</li>
+            <li>点击提示中的授权链接，打开本页面</li>
+            <li>将生成的授权码或二维码发送给管理员</li>
+            <li>等待管理员完成授权</li>
+            <li>返回扩展页面，点击"检查授权状态"按钮</li>
+        </ol>
+        
+        <h3>管理员端</h3>
+        <ol>
+            <li>接收用户提供的授权码或扫描二维码</li>
+            <li>在本页面输入授权码</li>
+            <li>点击"授权设备"按钮</li>
+            <li>通知用户授权已完成</li>
+        </ol>
+    </div>
+
+    <h2>授权记录</h2>
+    <div id="authHistory" style="margin: 20px 0;">
+        <p>暂无授权记录</p>
+    </div>
+
+    <script>
+        // 生成随机授权码
+        function generateAuthCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 8; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // 获取URL参数中的设备ID
+        function getUrlParams() {
+            const params = {};
+            const queryString = window.location.search.substring(1);
+            const pairs = queryString.split('&');
+            for (let i = 0; i < pairs.length; i++) {
+                const pair = pairs[i].split('=');
+                params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+            }
+            return params;
+        }
+
+        // 初始化页面
+        function init() {
+            const params = getUrlParams();
+            const deviceId = params.deviceId || '未知设备ID';
+            const authCode = generateAuthCode();
+            
+            // 显示设备信息
+            document.getElementById('deviceId').textContent = deviceId;
+            document.getElementById('authCode').textContent = authCode;
+            
+            // 生成简单的二维码文本表示（实际项目中应使用二维码库）
+            const qrContent = `DEVICE_ID: ${deviceId}\nAUTH_CODE: ${authCode}`;
+            const qrElement = document.getElementById('qrcode');
+            qrElement.innerHTML = `<pre style="font-family: monospace; font-size: 12px; line-height: 1;">${qrContent}</pre>`;
+        }
+
+        // 授权设备
+        function authorizeDevice() {
+            const adminAuthCode = document.getElementById('adminAuthCode').value;
+            const deviceId = document.getElementById('deviceId').textContent;
+            
+            if (!adminAuthCode) {
+                alert('请输入授权码');
+                return;
+            }
+            
+            // 实际项目中，这里应该发送请求到后端服务进行授权
+            // 这里只是模拟授权成功
+            setTimeout(() => {
+                alert(`设备 ${deviceId} 授权成功！`);
+                document.getElementById('authStatus').textContent = '已授权';
+                document.getElementById('authStatus').style.color = '#2ecc71';
+                
+                // 记录授权历史
+                const historyElement = document.getElementById('authHistory');
+                const now = new Date().toLocaleString();
+                historyElement.innerHTML = `
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="background-color: #f8f9fa;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">设备ID</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">授权时间</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">授权状态</th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${deviceId}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${now}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; color: #2ecc71;">已授权</td>
+                        </tr>
+                    </table>
+                `;
+            }, 1000);
+        }
+
+        // 页面加载时初始化
+        window.onload = init;
+    </script>
+</body>
+</html>

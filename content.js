@@ -1,3 +1,104 @@
+// 设备ID生成和管理
+async function getDeviceId() {
+  let result = await chrome.storage.local.get(['deviceId']);
+  let deviceId = result.deviceId;
+  if (!deviceId) {
+    // 生成基于当前时间和随机数的设备ID
+    deviceId = 'VID_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+    await chrome.storage.local.set({ deviceId: deviceId });
+  }
+  return deviceId;
+}
+
+// 下载次数管理
+async function getDownloadCount() {
+  const count = await chrome.storage.local.get(['downloadCount']);
+  return count.downloadCount || 0;
+}
+
+async function incrementDownloadCount() {
+  const count = await getDownloadCount();
+  await chrome.storage.local.set({ downloadCount: count + 1 });
+  return count + 1;
+}
+
+async function checkDownloadLimit() {
+  const MAX_DOWNLOADS = 1;
+  const count = await getDownloadCount();
+  return count < MAX_DOWNLOADS;
+}
+
+async function isAuthorized() {
+  const auth = await chrome.storage.local.get(['isAuthorized']);
+  return auth.isAuthorized || false;
+}
+
+// 生成授权二维码
+async function generateAuthQRCode() {
+  const deviceId = await getDeviceId();
+  const authUrl = `https://2011shao.github.io/videodown/auth.html?deviceId=${deviceId}`;
+  
+  // 创建二维码生成函数
+  return new Promise((resolve) => {
+    // 创建一个简单的二维码显示
+    const qrContent = `设备ID: ${deviceId}\n授权链接: ${authUrl}`;
+    resolve(qrContent);
+  });
+}
+
+// 显示授权提示
+async function showAuthPrompt() {
+  const deviceId = await getDeviceId();
+  const authUrl = `https://2011shao.github.io/videodown/auth.html?deviceId=${deviceId}`;
+  
+  // 创建授权提示元素
+  const authDiv = document.createElement('div');
+  authDiv.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 100000;
+    max-width: 400px;
+    text-align: center;
+  `;
+  
+  authDiv.innerHTML = `
+    <h3>下载次数已达上限</h3>
+    <p>您已经下载了10个视频，请扫码授权继续使用</p>
+    <div style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 5px;">
+      <strong>设备ID:</strong> ${deviceId}
+    </div>
+    <p>请访问以下链接进行授权:</p>
+    <a href="${authUrl}" target="_blank" style="color: #3498db; text-decoration: none;">${authUrl}</a>
+    <div style="margin-top: 20px;">
+      <button id="checkAuthBtn" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">检查授权状态</button>
+      <button id="closeAuthBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-left: 10px;">关闭</button>
+    </div>
+  `;
+  
+  document.body.appendChild(authDiv);
+  
+  // 添加事件监听器
+  document.getElementById('checkAuthBtn').addEventListener('click', async () => {
+    const authorized = await isAuthorized();
+    if (authorized) {
+      alert('授权成功！您可以继续使用下载功能。');
+      authDiv.remove();
+    } else {
+      alert('尚未授权，请先完成授权操作。');
+    }
+  });
+  
+  document.getElementById('closeAuthBtn').addEventListener('click', () => {
+    authDiv.remove();
+  });
+}
+
 // 创建下载按钮的函数
 function createDownloadButton(videoElement) {
   console.log('视频下载助手: 开始创建下载按钮');
@@ -53,6 +154,16 @@ function createDownloadButton(videoElement) {
     e.preventDefault();
     console.log('视频下载助手: 点击下载按钮');
     
+    // 检查下载限制和授权状态
+    const isUnderLimit = await checkDownloadLimit();
+    const authorized = await isAuthorized();
+    
+    if (!isUnderLimit && !authorized) {
+      console.log('视频下载助手: 下载次数已达上限，需要授权');
+      await showAuthPrompt();
+      return;
+    }
+    
     // 获取视频源URL
     let videoUrl = '';
     if (videoElement.src) {
@@ -86,7 +197,7 @@ function createDownloadButton(videoElement) {
           const originalUrl = await getOriginalUrlFromBlob(videoElement);
           if (originalUrl) {
             console.log('视频下载助手: 获取到原始URL:', originalUrl);
-            downloadVideo(originalUrl, fileName);
+            await downloadVideo(originalUrl, fileName);
           } else {
             // 如果无法获取原始URL，使用canvas录制方法
             console.log('视频下载助手: 使用canvas录制方法下载视频');
@@ -100,7 +211,13 @@ function createDownloadButton(videoElement) {
       // 处理普通URL的情况
       else {
         console.log('视频下载助手: 处理普通URL');
-        downloadVideo(videoUrl, fileName);
+        await downloadVideo(videoUrl, fileName);
+      }
+      
+      // 增加下载计数（仅当在限制内时）
+      if (isUnderLimit) {
+        await incrementDownloadCount();
+        console.log('视频下载助手: 下载次数已更新');
       }
     } else {
       alert('未找到视频源URL，请检查视频是否可播放');
