@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>带货视频助手 - 官方网站</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo img {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+        }
+        
+        .logo h1 {
+            font-size: 28px;
+            color: #1a1a1a;
+        }
+        
+        nav ul {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+        
+        nav a {
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        nav a:hover {
+            color: #1a1a1a;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+        
+        .hero h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .hero p {
+            font-size: 20px;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background-color: white;
+            color: #667eea;
+            padding: 15px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 18px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .features {
+            padding: 80px 0;
+            background-color: white;
+        }
+        
+        .features h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 60px;
+            color: #1a1a1a;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+        
+        .feature-card {
+            text-align: center;
+            padding: 30px;
+            background-color: #fafafa;
+            border-radius: 12px;
+            transition: transform 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-card img {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-card h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+        }
+        
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .installation {
+            padding: 80px 0;
+            background-color: #f5f5f5;
+        }
+        
+        .installation h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 60px;
+            color: #1a1a1a;
+        }
+        
+        .installation-steps {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .step {
+            background-color: white;
+            padding: 30px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .step h3 {
+            display: inline-block;
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+        }
+        
+        .step p {
+            color: #666;
+            margin-left: 55px;
+            line-height: 1.6;
+        }
+        
+        .gallery {
+            padding: 80px 0;
+            background-color: white;
+        }
+        
+        .gallery h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 60px;
+            color: #1a1a1a;
+        }
+        
+        .icons-gallery {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .icon-item {
+            text-align: center;
+        }
+        
+        .icon-item img {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .icon-item p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        footer {
+            background-color: #1a1a1a;
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+        
+        footer p {
+            margin: 10px 0;
+            opacity: 0.8;
+        }
+        
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .hero h2 {
+                font-size: 36px;
+            }
+            
+            .hero p {
+                font-size: 18px;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .icons-gallery {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <img src="icons/icon128.png" alt="带货视频助手">
+                    <h1>带货视频助手</h1>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#features">功能</a></li>
+                        <li><a href="#installation">安装</a></li>
+                        <li><a href="#gallery">图标</a></li>
+                        <li><a href="#contact">联系</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h2>带货视频助手</h2>
+            <p>实时监测页面视频并添加下载按钮，方便用户快速下载视频文件</p>
+            <a href="#installation" class="cta-button">立即安装</a>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <h2>核心功能</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <img src="icons/icon48.png" alt="实时监测">
+                    <h3>实时监测</h3>
+                    <p>自动监测页面中的视频元素，无论何时添加的视频都能被检测到</p>
+                </div>
+                <div class="feature-card">
+                    <img src="icons/icon48.png" alt="一键下载">
+                    <h3>一键下载</h3>
+                    <p>视频右上角自动出现下载按钮，点击即可快速下载视频文件</p>
+                </div>
+                <div class="feature-card">
+                    <img src="icons/icon48.png" alt="抖音支持">
+                    <h3>抖音支持</h3>
+                    <p>专门针对抖音网站优化，支持抖音视频的检测和下载</p>
+                </div>
+                <div class="feature-card">
+                    <img src="icons/icon48.png" alt="多平台兼容">
+                    <h3>多平台兼容</h3>
+                    <p>支持多种视频网站和平台，不仅仅局限于抖音</p>
+                </div>
+                <div class="feature-card">
+                    <img src="icons/icon48.png" alt="轻量高效">
+                    <h3>轻量高效</h3>
+                    <p>占用资源少，运行流畅，不会影响浏览器性能</p>
+                </div>
+                <div class="feature-card">
+                    <img src="icons/icon48.png" alt="安全可靠">
+                    <h3>安全可靠</h3>
+                    <p>仅使用必要的权限，保护用户隐私和安全</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="installation" id="installation">
+        <div class="container">
+            <h2>安装指南</h2>
+            <div class="installation-steps">
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <h3>打开Chrome开发者模式</h3>
+                    <p>在Chrome浏览器中访问 <code>chrome://extensions/</code>，然后开启右上角的"开发者模式"</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <h3>加载已解压的扩展程序</h3>
+                    <p>点击"加载已解压的扩展程序"按钮，选择包含 <code>manifest.json</code> 文件的项目文件夹</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <h3>完成安装</h3>
+                    <p>扩展图标会出现在浏览器工具栏中，安装完成后即可开始使用</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <h3>开始使用</h3>
+                    <p>打开抖音或其他视频网站，播放视频，右上角会自动出现下载按钮</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="gallery" id="gallery">
+        <div class="container">
+            <h2>扩展图标</h2>
+            <div class="icons-gallery">
+                <div class="icon-item">
+                    <img src="icons/icon16.png" alt="16x16 图标">
+                    <p>16x16 像素</p>
+                </div>
+                <div class="icon-item">
+                    <img src="icons/icon32.png" alt="32x32 图标">
+                    <p>32x32 像素</p>
+                </div>
+                <div class="icon-item">
+                    <img src="icons/icon48.png" alt="48x48 图标">
+                    <p>48x48 像素</p>
+                </div>
+                <div class="icon-item">
+                    <img src="icons/icon128.png" alt="128x128 图标">
+                    <p>128x128 像素</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer id="contact">
+        <div class="container">
+            <p>&copy; 2026 带货视频助手. 保留所有权利.</p>
+            <p>官方网站: <a href="https://www.douyin.com/" target="_blank">https://www.douyin.com/</a></p>
+            <p>版本: 2.1.0</p>
+        </div>
+    </footer>
+</body>
+</html>

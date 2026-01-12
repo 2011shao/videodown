@@ -3,7 +3,7 @@
   "name": "带货视频助手",
   "version": "2.1.0",
   "description": "实时监测页面视频并添加下载按钮，方便用户快速下载视频文件 - 强制更新版",
-  "homepage_url": "https://www.douyin.com/",
+  "homepage_url": "https://2011shao.github.io/videodown/index.html",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
