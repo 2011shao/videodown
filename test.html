@@ -3,76 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>视频下载助手测试</title>
+    <title>抖音视频下载助手 - 测试页面</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f5f5f5;
         }
-        .video-container {
-            margin-bottom: 30px;
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
             padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
         }
         video {
-            width: 100%;
-            max-width: 600px;
-            display: block;
-            margin: 0 auto;
-        }
-        h2 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-        .note {
-            background-color: #f0f0f0;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-size: 14px;
+            max-width: 100%;
+            margin: 20px 0;
         }
     </style>
 </head>
 <body>
-    <h1>视频下载助手测试页面</h1>
-    
-    <div class="video-container">
-        <h2>测试视频 1 - 直接设置src属性</h2>
-        <video controls src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">
-            您的浏览器不支持HTML5视频
-        </video>
-        <div class="note">
-            这是一个直接设置了src属性的视频示例
+    <div class="container">
+        <h1>抖音视频下载助手 - 测试页面</h1>
+        
+        <div class="test-section">
+            <h2>1. Service Worker 连接测试</h2>
+            <button onclick="testServiceWorkerConnection()">测试Service Worker连接</button>
+            <div id="sw-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. 模拟抖音API请求</h2>
+            <button onclick="simulateDouyinApiRequest()">发送模拟抖音API请求</button>
+            <div id="api-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. 视频下载测试</h2>
+            <video controls>
+                <source src="https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4" type="video/mp4">
+                您的浏览器不支持视频播放。
+            </video>
+            <p>测试视频来源: test-videos.co.uk</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. 扩展功能说明</h2>
+            <ul>
+                <li>确保已安装扩展并启用开发者模式</li>
+                <li>在Chrome扩展管理页面点击"检查视图"→"服务工作线程"查看日志</li>
+                <li>访问抖音视频页面时，扩展会自动监听API请求</li>
+                <li>点击扩展图标可以触发视频检查</li>
+            </ul>
         </div>
     </div>
-    
-    <div class="video-container">
-        <h2>测试视频 2 - 使用source标签</h2>
-        <video controls>
-            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" type="video/mp4">
-            您的浏览器不支持HTML5视频
-        </video>
-        <div class="note">
-            这是一个使用source标签的视频示例
-        </div>
-    </div>
-    
-    <div class="video-container">
-        <h2>测试视频 3 - 动态加载</h2>
-        <div id="dynamic-video-container"></div>
-        <button onclick="loadDynamicVideo()">加载动态视频</button>
-        <div class="note">
-            点击按钮后动态加载的视频示例
-        </div>
-    </div>
-    
+
     <script>
-        function loadDynamicVideo() {
-            const container = document.getElementById('dynamic-video-container');
-            container.innerHTML = '<video controls src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4">您的浏览器不支持HTML5视频</video>';
+        // 测试Service Worker连接
+        function testServiceWorkerConnection() {
+            const resultDiv = document.getElementById('sw-result');
+            resultDiv.innerHTML = '正在测试Service Worker连接...';
+            
+            if (window.chrome && window.chrome.runtime) {
+                window.chrome.runtime.sendMessage(
+                    { type: 'TEST_CONNECTION' },
+                    function(response) {
+                        if (chrome.runtime.lastError) {
+                            resultDiv.className = 'result error';
+                            resultDiv.innerHTML = '❌ Service Worker连接失败: ' + chrome.runtime.lastError.message;
+                            return;
+                        }
+                        
+                        if (response && response.status === 'success') {
+                            resultDiv.className = 'result success';
+                            resultDiv.innerHTML = '✅ Service Worker连接成功: ' + response.message;
+                        } else {
+                            resultDiv.className = 'result error';
+                            resultDiv.innerHTML = '❌ Service Worker连接失败: 无响应';
+                        }
+                    }
+                );
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = '❌ 扩展未安装或未在扩展环境中运行';
+            }
+        }
+        
+        // 模拟抖音API请求
+        function simulateDouyinApiRequest() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '正在发送模拟抖音API请求...';
+            
+            // 创建一个模拟的API请求
+            const mockApiUrl = 'https://www.douyin.com/aweme/v1/web/aweme/detail?id=123456789';
+            
+            // 使用fetch发送请求（实际会被service worker捕获）
+            fetch(mockApiUrl)
+                .then(response => {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = '✅ 模拟抖音API请求已发送:<br>' + mockApiUrl;
+                    resultDiv.innerHTML += '<br><br>请查看Service Worker控制台日志，确认是否捕获到该请求';
+                })
+                .catch(error => {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = '❌ 请求失败: ' + error.message;
+                });
+        }
+        
+        // 监听来自background.js的消息
+        if (window.chrome && window.chrome.runtime) {
+            chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+                console.log('📩 收到来自扩展的消息:', message);
+                
+                if (message.type === 'CHECK_VIDEOS') {
+                    console.log('🔍 扩展要求检查视频');
+                    alert('扩展要求检查视频，请查看控制台日志');
+                    sendResponse({ status: 'success' });
+                }
+                
+                if (message.type === 'DOUYIN_API_REQUESTED') {
+                    console.log('🎯 抖音API请求已捕获，URL:', message.apiUrl);
+                    alert('抖音API请求已捕获，请查看控制台日志');
+                    sendResponse({ status: 'success' });
+                }
+            });
         }
     </script>
 </body>

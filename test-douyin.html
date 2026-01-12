@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抖音视频下载助手测试页面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background-color: #fafafa;
+        }
+        h2 {
+            color: #555;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+        .test-video {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .log {
+            background-color: #333;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>抖音视频下载助手测试页面</h1>
+        
+        <div class="section">
+            <h2>1. 测试Service Worker连接</h2>
+            <button id="test-sw">测试Service Worker连接</button>
+            <div id="sw-status" class="status info">点击按钮测试Service Worker连接...</div>
+        </div>
+        
+        <div class="section">
+            <h2>2. 发送模拟抖音API请求</h2>
+            <button id="test-douyin-api">发送模拟抖音视频详情API请求</button>
+            <div id="api-status" class="status info">点击按钮模拟抖音API请求...</div>
+        </div>
+        
+        <div class="section">
+            <h2>3. 测试视频下载功能</h2>
+            <video class="test-video" controls>
+                <source src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" type="video/mp4">
+                您的浏览器不支持视频播放。
+            </video>
+            <p>如果扩展正常工作，视频右上角会显示"下载视频"按钮。</p>
+        </div>
+        
+        <div class="section">
+            <h2>4. 测试日志</h2>
+            <div class="log" id="test-log">
+                测试日志将显示在这里...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试日志功能
+        function addLog(message) {
+            const logElement = document.getElementById('test-log');
+            const now = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${now}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // 清除日志
+        function clearLog() {
+            document.getElementById('test-log').innerHTML = '';
+        }
+        
+        // 测试Service Worker连接
+        document.getElementById('test-sw').addEventListener('click', function() {
+            clearLog();
+            addLog('正在测试Service Worker连接...');
+            
+            const statusElement = document.getElementById('sw-status');
+            statusElement.className = 'status info';
+            statusElement.textContent = '正在测试Service Worker连接...';
+            
+            // 尝试与Service Worker通信
+            chrome.runtime.sendMessage({
+                type: 'TEST_CONNECTION'
+            }, function(response) {
+                if (response) {
+                    addLog('✅ Service Worker连接成功！');
+                    addLog('   响应: ' + JSON.stringify(response));
+                    statusElement.className = 'status success';
+                    statusElement.textContent = 'Service Worker连接成功！';
+                } else {
+                    addLog('❌ Service Worker连接失败');
+                    addLog('   错误: ' + chrome.runtime.lastError.message);
+                    statusElement.className = 'status error';
+                    statusElement.textContent = 'Service Worker连接失败，请检查扩展是否正确加载。';
+                }
+            });
+        });
+        
+        // 发送模拟抖音API请求
+        document.getElementById('test-douyin-api').addEventListener('click', function() {
+            clearLog();
+            addLog('正在发送模拟抖音API请求...');
+            
+            const statusElement = document.getElementById('api-status');
+            statusElement.className = 'status info';
+            statusElement.textContent = '正在发送模拟抖音API请求...';
+            
+            // 发送模拟的抖音视频详情API请求
+            fetch('https://www.douyin.com/aweme/v1/web/aweme/detail?id=test123', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                addLog('📤 模拟API请求已发送');
+                addLog('   URL: https://www.douyin.com/aweme/v1/web/aweme/detail?id=test123');
+                addLog('   状态码: ' + response.status);
+                
+                statusElement.className = 'status success';
+                statusElement.textContent = '模拟抖音API请求已发送！请查看Service Worker控制台日志。';
+            }).catch(error => {
+                addLog('❌ 发送模拟API请求失败');
+                addLog('   错误: ' + error.message);
+                
+                statusElement.className = 'status error';
+                statusElement.textContent = '发送模拟API请求失败: ' + error.message;
+            });
+        });
+        
+        // 监听来自扩展的消息
+        chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+            addLog('📬 收到扩展消息: ' + JSON.stringify(message));
+            
+            if (message.type === 'DOUYIN_VIDEO_URLS') {
+                addLog('🎬 收到抖音视频URL: ' + JSON.stringify(message.urls));
+                addLog('   清晰度: ' + message.quality);
+                
+                const apiStatus = document.getElementById('api-status');
+                apiStatus.className = 'status success';
+                apiStatus.textContent = '成功收到抖音视频URL！扩展功能正常工作。';
+            }
+            
+            if (message.type === 'DOUYIN_API_REQUESTED') {
+                addLog('🔍 检测到抖音API请求: ' + message.apiUrl);
+            }
+        });
+        
+        // 初始化日志
+        addLog('测试页面已加载，准备测试抖音视频下载助手扩展...');
+        addLog('提示：请确保扩展已正确安装并启用！');
+    </script>
+</body>
+</html>
